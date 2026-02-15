@@ -1,1 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mooring Station Monitoring</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
+<style>
+body{
+    background:linear-gradient(to bottom,#0f172a,#020617);
+    color:#e2e8f0;
+    font-family:'Segoe UI',sans-serif;
+    padding:30px;
+}
+
+h1{
+    font-weight:600;
+    margin-bottom:25px;
+}
+
+/* PANEL */
+.panel{
+    background:#1e293b;
+    border-radius:20px;
+    padding:25px;
+    box-shadow:0 0 30px rgba(0,0,0,0.6);
+    margin-bottom:20px;
+}
+
+/* PROGRESS */
+.progress{
+    height:22px;
+    border-radius:20px;
+    background:#0f172a;
+}
+
+.progress-bar{
+    transition:0.6s ease;
+    font-weight:bold;
+}
+
+/* STATUS BOXES */
+.status-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:15px;
+    margin-top:20px;
+}
+
+.status-card{
+    padding:15px;
+    border-radius:15px;
+    text-align:center;
+    font-weight:bold;
+    transition:0.4s;
+}
+
+.normal{ background:#16a34a; }
+.warning{ background:#eab308; color:black; }
+.danger{ background:#dc2626; }
+
+/* LOG */
+.log-box{
+    height:200px;
+    overflow-y:auto;
+    background:#0f172a;
+    padding:15px;
+    border-radius:15px;
+    font-size:14px;
+}
+
+.log-entry{
+    border-bottom:1px solid rgba(255,255,255,0.1);
+    padding:5px 0;
+}
+
+/* Rope */
+.rope{
+    stroke:#38bdf8;
+    stroke-width:5;
+    transition:0.5s;
+}
+
+.rope.tight{
+    stroke:#ef4444;
+    stroke-width:10;
+}
+
+.rope.loose{
+    stroke:#facc15;
+    stroke-dasharray:10 5;
+}
+
+.water{
+    fill:#1e3a8a;
+    opacity:0.5;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🚢 Mooring Station Monitoring</h1>
+
+<div class="row">
+
+<!-- LEFT SIDE -->
+<div class="col-lg-8">
+
+<div class="panel">
+<h5>Live Visualization</h5>
+
+<svg width="100%" height="350">
+
+<rect x="0" y="250" width="100%" height="100" class="water"/>
+<rect x="0" y="240" width="100%" height="15" fill="#334155"/>
+
+<rect x="250" y="150" width="300" height="70" fill="#475569" rx="10"/>
+<polygon points="250,220 550,220 520,250 280,250" fill="#1e293b"/>
+<rect x="420" y="110" width="100" height="40" fill="#cbd5e1"/>
+<rect x="440" y="90" width="60" height="20" fill="#94a3b8"/>
+<rect x="300" y="120" width="30" height="40" fill="#334155"/>
+<rect x="300" y="120" width="30" height="10" fill="#ef4444"/>
+
+<line id="rope1" x1="250" y1="210" x2="120" y2="240" class="rope"/>
+<line id="rope2" x1="400" y1="210" x2="400" y2="240" class="rope"/>
+<line id="rope3" x1="550" y1="210" x2="680" y2="240" class="rope"/>
+
+</svg>
+
+<!-- STATUS PER LINE -->
+<div class="status-grid">
+<div id="status1" class="status-card normal">Line 1 : NORMAL</div>
+<div id="status2" class="status-card normal">Line 2 : NORMAL</div>
+<div id="status3" class="status-card normal">Line 3 : NORMAL</div>
+</div>
+
+</div>
+</div>
+
+<!-- RIGHT SIDE -->
+<div class="col-lg-4">
+
+<div class="panel">
+<h5>Line Tension (Ton)</h5>
+
+<div class="mb-3">
+Line 1: <span id="val1">0</span> T
+<div class="progress">
+<div id="bar1" class="progress-bar bg-info" style="width:0%">0%</div>
+</div>
+</div>
+
+<div class="mb-3">
+Line 2: <span id="val2">0</span> T
+<div class="progress">
+<div id="bar2" class="progress-bar bg-info" style="width:0%">0%</div>
+</div>
+</div>
+
+<div>
+Line 3: <span id="val3">0</span> T
+<div class="progress">
+<div id="bar3" class="progress-bar bg-info" style="width:0%">0%</div>
+</div>
+</div>
+
+</div>
+
+<div class="panel">
+<h5>Event Log</h5>
+<div class="log-box" id="logBox"></div>
+</div>
+
+</div>
+</div>
+
+<script>
+
+let gateway = "ws://10.206.217.68/ws";
+let websocket;
+let lastStatus=["","",""];
+
+window.addEventListener('load', initWebSocket);
+
+function initWebSocket(){
+    websocket = new WebSocket(gateway);
+
+    websocket.onmessage = function(event){
+        let data = event.data.split(",");
+        updateLine(1, parseFloat(data[0]));
+        updateLine(2, parseFloat(data[1]));
+        updateLine(3, parseFloat(data[2]));
+    };
+}
+
+function updateLine(line, value){
+
+    let bar=document.getElementById("bar"+line);
+    let text=document.getElementById("val"+line);
+    let rope=document.getElementById("rope"+line);
+    let statusCard=document.getElementById("status"+line);
+
+    text.innerText=value.toFixed(1);
+    bar.style.width=value+"%";
+    bar.innerText=value.toFixed(1)+"%";
+
+    bar.className="progress-bar";
+    rope.classList.remove("tight","loose");
+    statusCard.className="status-card";
+
+    let status="";
+
+    if(value>80){
+        bar.classList.add("bg-danger");
+        rope.classList.add("tight");
+        statusCard.classList.add("danger");
+        status="OVERTENSION";
+    }
+    else if(value<10){
+        bar.classList.add("bg-warning");
+        rope.classList.add("loose");
+        statusCard.classList.add("warning");
+        status="TOO LOOSE";
+    }
+    else{
+        bar.classList.add("bg-info");
+        statusCard.classList.add("normal");
+        status="NORMAL";
+    }
+
+    statusCard.innerText="Line "+line+" : "+status;
+
+    if(lastStatus[line-1]!==status){
+        addLog("Line "+line+" : "+status);
+        lastStatus[line-1]=status;
+    }
+}
+
+function addLog(message){
+    let logBox=document.getElementById("logBox");
+    let time=new Date().toLocaleTimeString();
+    logBox.innerHTML="<div class='log-entry'>["+time+"] "+message+"</div>"+logBox.innerHTML;
+}
+
+</script>
+
+</body>
+</html>
