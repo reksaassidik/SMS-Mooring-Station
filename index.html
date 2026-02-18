@@ -178,7 +178,7 @@ Line 3: <span id="val3">0</span> T
 
 <script>
 
-let gateway = "ws://10.206.217.68/ws";
+let gateway = "ws://192.168.12.199/ws";
 let websocket;
 let lastStatus=["","",""];
 
@@ -212,13 +212,13 @@ function updateLine(line, value){
 
     let status="";
 
-    if(value>80){
+    if(value>8){
         bar.classList.add("bg-danger");
         rope.classList.add("tight");
         statusCard.classList.add("danger");
         status="OVERTENSION";
     }
-    else if(value<10){
+    else if(value<2){
         bar.classList.add("bg-warning");
         rope.classList.add("loose");
         statusCard.classList.add("warning");
